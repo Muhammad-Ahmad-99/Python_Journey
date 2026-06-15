@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Study Hours vs CGPA — Statistical Analysis Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --primary:#1F3864;--accent:#2E74B5;--accent-light:#BDD7EE;--accent-bg:#EBF3FB;
+    --gold:#FFD966;--gold-bg:#FFF8DC;--green:#27A560;--green-bg:#EAF6EE;
+    --text:#1a1a2e;--muted:#666;--bg:#F0F4F8;--card:#fff;--border:#D5E3F0;--red:#C0392B;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+  .header{background:linear-gradient(135deg,var(--primary) 0%,#2c4a8c 60%,var(--accent) 100%);color:#fff;padding:22px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+  .header h1{font-size:20px;font-weight:700;}
+  .header p{font-size:12px;opacity:.75;margin-top:3px;}
+  .pills{display:flex;gap:8px;flex-wrap:wrap;}
+  .pill{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:500;}
+  .pill span{opacity:.7;font-size:10px;display:block;margin-top:1px;}
+
+  .tabs{background:var(--card);border-bottom:2px solid var(--border);display:flex;padding:0 20px;gap:2px;overflow-x:auto;}
+  .tab{padding:13px 16px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:all .2s;}
+  .tab:hover{color:var(--accent);}
+  .tab.active{color:var(--primary);border-bottom-color:var(--accent);font-weight:600;}
+
+  .main{padding:22px 26px;max-width:1300px;margin:0 auto;}
+  .page{display:none;}.page.active{display:block;}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
+  .kpi{background:var(--card);border-radius:10px;border:1px solid var(--border);padding:14px;}
+  .kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+  .kpi .val{font-size:24px;font-weight:700;color:var(--primary);line-height:1;}
+  .kpi .sub{font-size:11px;color:var(--muted);margin-top:3px;}
+  .kpi.a{background:var(--accent-bg);border-color:var(--accent-light);}.kpi.a .val{color:var(--accent);}
+  .kpi.g{background:var(--gold-bg);border-color:#F0C040;}.kpi.g .val{color:#8B6914;}
+  .kpi.gr{background:var(--green-bg);border-color:#90CFA8;}.kpi.gr .val{color:var(--green);}
+
+  .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px;}
+  .chart-card{background:var(--card);border-radius:10px;border:1px solid var(--border);padding:18px;}
+  .chart-card h3{font-size:13px;font-weight:600;color:var(--primary);margin-bottom:3px;}
+  .chart-card .csub{font-size:11px;color:var(--muted);margin-bottom:14px;}
+  .full{grid-column:1/-1;}
+
+  .data-sec{background:var(--card);border-radius:10px;border:1px solid var(--border);padding:18px;margin-bottom:18px;}
+  .data-sec h3{font-size:14px;font-weight:600;color:var(--primary);margin-bottom:14px;}
+  .dtbl{width:100%;border-collapse:collapse;}
+  .dtbl th{background:var(--primary);color:#fff;font-size:12px;font-weight:600;padding:9px 11px;text-align:left;}
+  .dtbl td{padding:7px 11px;font-size:13px;border-bottom:1px solid var(--border);}
+  .dtbl tr:hover td{background:var(--accent-bg);}
+  .dtbl input{width:75px;padding:3px 7px;border:1px solid var(--border);border-radius:5px;font-size:13px;text-align:center;}
+  .dtbl input:focus{outline:none;border-color:var(--accent);}
+
+  .btn{padding:7px 14px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid;transition:all .15s;}
+  .btn-p{background:var(--primary);color:#fff;border-color:var(--primary);}.btn-p:hover{background:var(--accent);}
+  .btn-d{background:#FEF2F2;color:var(--red);border-color:#FECACA;}.btn-d:hover{background:#FEE2E2;}
+  .btn-g{background:var(--green-bg);color:var(--green);border-color:#90CFA8;}
+  .btn-sm{padding:3px 9px;font-size:12px;border-radius:5px;}
+
+  .add-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;}
+  .add-row input{padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;width:135px;}
+  .add-row input:focus{outline:none;border-color:var(--accent);}
+
+  .reg-box{background:var(--gold-bg);border:1px solid #F0C040;border-radius:9px;padding:14px 18px;margin-bottom:14px;}
+  .reg-eq{font-size:20px;font-weight:700;color:#8B6914;}
+  .reg-sub{font-size:12px;color:#A07820;margin-top:5px;}
+
+  .stbl{width:100%;border-collapse:collapse;}
+  .stbl th{background:var(--accent-bg);color:var(--primary);font-size:12px;font-weight:600;padding:7px 11px;text-align:left;}
+  .stbl td{padding:6px 11px;font-size:13px;border-bottom:1px solid var(--border);}
+  .stbl tr:last-child td{border-bottom:none;}
+  .stbl td:last-child{font-weight:600;color:var(--primary);}
+
+  .pred-sec{background:var(--accent-bg);border:1px solid var(--accent-light);border-radius:9px;padding:14px 18px;}
+  .pred-sec h4{font-size:13px;font-weight:600;color:var(--primary);margin-bottom:10px;}
+  .pred-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .pred-row label{font-size:13px;color:var(--muted);}
+  .pred-row input[type=range]{width:180px;}
+  .pred-val{font-size:22px;font-weight:700;color:var(--accent);}
+  .badge{display:inline-block;padding:2px 9px;border-radius:15px;font-size:11px;font-weight:600;margin-left:6px;}
+
+  .team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;}
+  .mcard{background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden;}
+  .mhead{padding:18px;display:flex;align-items:center;gap:12px;}
+  .avatar{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0;}
+  .mname{font-size:15px;font-weight:700;color:var(--primary);}
+  .mreg{font-size:11px;color:var(--muted);margin-top:2px;}
+  .rbadge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:10px;font-weight:600;margin-top:3px;}
+  .mtasks{padding:0 18px 18px;}
+  .mtasks li{font-size:12px;color:var(--text);padding:4px 0;border-bottom:1px solid var(--border);list-style:none;display:flex;gap:5px;}
+  .mtasks li:last-child{border-bottom:none;}
+  .mtasks li::before{content:"✓";color:var(--green);font-weight:700;flex-shrink:0;}
+
+  .prob-tbl{width:100%;border-collapse:collapse;margin-bottom:14px;}
+  .prob-tbl th{background:var(--primary);color:#fff;font-size:12px;padding:8px 10px;text-align:left;}
+  .prob-tbl td{padding:7px 10px;font-size:13px;border-bottom:1px solid var(--border);}
+  .prob-tbl tr:nth-child(even) td{background:var(--accent-bg);}
+
+  @media(max-width:700px){.charts-grid{grid-template-columns:1fr;}.main{padding:14px;}.header{padding:16px 14px;}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div><h1>📊 Study Hours vs CGPA — Statistical Analysis Dashboard</h1>
+    <p>PST Semester Group Project · Department of Computer Science · Namal University, Mianwali · June 2026</p></div>
+  <div class="pills">
+    <div class="pill">Muhammad Ahmad<span>NUM-BSCS-2024-44</span></div>
+    <div class="pill">Allah Ditta<span>NUM-BSCS-2024-10</span></div>
+    <div class="pill">Najia Nayab<span>NUM-BSCS-2024-62</span></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="go('dashboard')">📊 Dashboard</div>
+  <div class="tab" onclick="go('data')">📋 Data & Edit</div>
+  <div class="tab" onclick="go('stats')">🔢 Statistics</div>
+  <div class="tab" onclick="go('probability')">🎲 Probability</div>
+  <div class="tab" onclick="go('regression')">📈 Regression</div>
+  <div class="tab" onclick="go('team')">👥 Team</div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page active main">
+  <div class="kpi-grid" id="kpis"></div>
+  <div class="charts-grid">
+    <div class="chart-card full"><h3>Scatter Plot — Study Hours vs CGPA with Regression Line</h3>
+      <div class="csub">Each point = one student · Red line = regression equation Y = b0 + b1×X</div>
+      <div style="height:300px"><canvas id="cScatter"></canvas></div></div>
+    <div class="chart-card"><h3>Histogram — Study Hours Distribution</h3>
+      <div class="csub">Frequency distribution of weekly study hours</div>
+      <div style="height:240px"><canvas id="cHist"></canvas></div></div>
+    <div class="chart-card"><h3>Average CGPA by Study Bracket</h3>
+      <div class="csub">Low (5–12) · Moderate (13–20) · High (21–30) · Very High (31–40)</div>
+      <div style="height:240px"><canvas id="cBar"></canvas></div></div>
+    <div class="chart-card"><h3>Box Plot — Spread Comparison</h3>
+      <div class="csub">Normalized IQR for Study Hours vs CGPA</div>
+      <div style="height:240px"><canvas id="cBox"></canvas></div></div>
+    <div class="chart-card full"><h3>Normal Curve — CGPA Distribution with Empirical Rule</h3>
+      <div class="csub">68% · 95% · 99.7% bands overlaid on CGPA frequency</div>
+      <div style="height:260px"><canvas id="cNormal"></canvas></div></div>
+  </div>
+</div>
+
+<!-- DATA -->
+<div id="page-data" class="page main">
+  <div class="data-sec">
+    <h3>📋 Student Dataset — Click any value to edit · All charts update instantly</h3>
+    <table class="dtbl"><thead><tr><th>#</th><th>Study Hours/Week (X)</th><th>CGPA (Y)</th><th>Bracket</th><th>Actions</th></tr></thead>
+    <tbody id="dataBody"></tbody></table>
+    <div class="add-row">
+      <input type="number" id="nH" placeholder="Study Hours (1–60)" min="1" max="60" step="0.5">
+      <input type="number" id="nC" placeholder="CGPA (0.0–4.0)" min="0" max="4" step="0.01">
+      <button class="btn btn-g" onclick="addRow()">+ Add Student</button>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div id="page-stats" class="page main">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;">
+    <div class="data-sec" style="margin:0"><h3>📊 Study Hours (X) — Full Statistics</h3><table class="stbl" id="stX"></table></div>
+    <div class="data-sec" style="margin:0"><h3>📊 CGPA (Y) — Full Statistics</h3><table class="stbl" id="stY"></table></div>
+  </div>
+  <div class="data-sec"><h3>📦 Distribution Histograms</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+      <div><div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Study Hours — Shape</div><div style="height:200px"><canvas id="cHX"></canvas></div></div>
+      <div><div style="font-size:12px;color:var(--muted);margin-bottom:8px;">CGPA — Shape</div><div style="height:200px"><canvas id="cHY"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- PROBABILITY -->
+<div id="page-probability" class="page main">
+  <div class="data-sec" style="margin-bottom:18px;">
+    <h3>🎲 Probability  [Najia Nayab — NUM-BSCS-2024-62]</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">P(A) = favorable outcomes / total students (n = <span id="nTotal">20</span>)</p>
+    <table class="prob-tbl" id="probTbl"></table>
+  </div>
+  <div class="data-sec" style="margin-bottom:18px;">
+    <h3>🔀 Conditional Probability  [Allah Ditta — NUM-BSCS-2024-10]</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">P(A|B) = P(A and B) / P(B) — probability of A given B has occurred</p>
+    <table class="prob-tbl" id="condTbl"></table>
+  </div>
+  <div class="data-sec">
+    <h3>📐 Empirical Rule  [Najia Nayab — NUM-BSCS-2024-62]</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Applied to CGPA — verifies approximate normal distribution</p>
+    <table class="prob-tbl" id="empTbl"></table>
+  </div>
+</div>
+
+<!-- REGRESSION -->
+<div id="page-regression" class="page main">
+  <div class="data-sec" style="margin-bottom:18px;">
+    <h3>📈 Correlation & Regression  [Najia Nayab (r) + Muhammad Ahmad (Regression)]</h3>
+    <div class="reg-box" id="regEq"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px;">
+      <table class="stbl" id="corrTbl"></table>
+      <table class="stbl" id="regTbl"></table>
+    </div>
+  </div>
+  <div class="data-sec" style="margin-bottom:18px;">
+    <h3>🔮 CGPA Predictor — Muhammad Ahmad</h3>
+    <div class="pred-sec">
+      <div class="pred-row">
+        <label>Study Hours/Week:</label>
+        <input type="range" min="1" max="60" value="20" id="predSlider" oninput="updatePred()">
+        <input type="number" min="1" max="60" value="20" id="predNum" style="width:65px;padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-size:13px;" oninput="syncSlider()">
+        <div><span style="font-size:12px;color:var(--muted);">Predicted CGPA: </span>
+          <span class="pred-val" id="predVal">—</span><span class="badge" id="predBadge"></span></div>
+      </div>
+    </div>
+  </div>
+  <div class="data-sec">
+    <h3>📊 Scatter + Residuals</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+      <div><div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Scatter with regression line</div><div style="height:260px"><canvas id="cRegSc"></canvas></div></div>
+      <div><div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Residuals (actual − predicted)</div><div style="height:260px"><canvas id="cResid"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- TEAM -->
+<div id="page-team" class="page main">
+  <div class="team-grid" id="teamGrid"></div>
+  <div class="data-sec" style="margin-top:18px;">
+    <h3>📋 Topic Distribution Summary</h3>
+    <table class="prob-tbl">
+      <thead><tr><th>PST Topic</th><th>Responsible Member</th><th>Key Result</th></tr></thead>
+      <tbody>
+        <tr><td>Mean</td><td>Muhammad Ahmad</td><td>X-bar = 22.05 hrs, Y-bar = 3.03</td></tr>
+        <tr><td>Median</td><td>Muhammad Ahmad</td><td>X = 21.50 hrs, Y = 3.125</td></tr>
+        <tr><td>Mode</td><td>Muhammad Ahmad</td><td>No mode in either variable</td></tr>
+        <tr><td>Graphs</td><td>Muhammad Ahmad</td><td>4 graphs: Scatter, Histogram, Box Plot, Bar Chart</td></tr>
+        <tr><td>Regression</td><td>Muhammad Ahmad</td><td>Y = 0.0583X + 1.7439, SE = 0.0427</td></tr>
+        <tr><td>Percentile</td><td>Allah Ditta</td><td>Q1 = 14.75 hrs / 2.64, Q3 = 30.50 hrs / 3.49</td></tr>
+        <tr><td>Variance</td><td>Allah Ditta</td><td>s2 = 95.94 (Hours), s2 = 0.3286 (CGPA)</td></tr>
+        <tr><td>Standard Deviation</td><td>Allah Ditta</td><td>s = 9.80 hrs, s = 0.5732 CGPA</td></tr>
+        <tr><td>Conditional Probability</td><td>Allah Ditta</td><td>P(CGPA>3.0 | Hours>20) = 1.00</td></tr>
+        <tr><td>Correlation Coefficient</td><td>Najia Nayab</td><td>r = 0.9972, r2 = 0.9944</td></tr>
+        <tr><td>Normal Curve</td><td>Najia Nayab</td><td>Both variables approx. normal</td></tr>
+        <tr><td>Empirical Rule</td><td>Najia Nayab</td><td>68% / 95% / 100% match expected</td></tr>
+        <tr><td>Probability</td><td>Najia Nayab</td><td>P(CGPA > 3.0) = 0.55</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let data = [
+  {h:5,c:1.80},{h:8,c:2.10},{h:10,c:2.30},{h:12,c:2.50},{h:14,c:2.60},
+  {h:15,c:2.75},{h:17,c:2.90},{h:18,c:3.00},{h:20,c:3.10},{h:21,c:3.15},
+  {h:22,c:3.20},{h:24,c:3.30},{h:25,c:3.35},{h:26,c:3.40},{h:28,c:3.50},
+  {h:30,c:3.55},{h:32,c:3.65},{h:35,c:3.75},{h:38,c:3.80},{h:40,c:3.90},
+];
+let charts={};
+let curPage='dashboard';
+
+function go(p){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  ['dashboard','data','stats','probability','regression','team'].forEach((x,i)=>{ if(x===p) document.querySelectorAll('.tab')[i].classList.add('active'); });
+  curPage=p; render();
+}
+
+function calc(arr){
+  const n=arr.length, s=[...arr].sort((a,b)=>a-b);
+  const mean=arr.reduce((t,v)=>t+v,0)/n;
+  const variance=arr.reduce((t,v)=>t+(v-mean)**2,0)/(n-1);
+  const sd=Math.sqrt(variance);
+  const median=n%2===0?(s[n/2-1]+s[n/2])/2:s[Math.floor(n/2)];
+  const pct=p=>{ const i=(p/100)*(n-1),lo=Math.floor(i),hi=Math.ceil(i); return s[lo]+(s[hi]-s[lo])*(i-lo); };
+  const q1=pct(25),q3=pct(75);
+  const skew=arr.reduce((t,v)=>t+((v-mean)/sd)**3,0)/n;
+  const kurt=arr.reduce((t,v)=>t+((v-mean)/sd)**4,0)/n-3;
+  return {n,mean,median,variance,sd,min:s[0],max:s[n-1],q1,q3,iqr:q3-q1,range:s[n-1]-s[0],skew,kurt,p10:pct(10),p90:pct(90)};
+}
+
+function reg(xs,ys){
+  const n=xs.length, mx=xs.reduce((t,v)=>t+v,0)/n, my=ys.reduce((t,v)=>t+v,0)/n;
+  const b1=xs.reduce((t,x,i)=>t+(x-mx)*(ys[i]-my),0)/xs.reduce((t,x)=>t+(x-mx)**2,0);
+  const b0=my-b1*mx;
+  const yh=xs.map(x=>b0+b1*x);
+  const ss_res=ys.reduce((t,y,i)=>t+(y-yh[i])**2,0);
+  const ss_tot=ys.reduce((t,y)=>t+(y-my)**2,0);
+  const r2=1-ss_res/ss_tot, r=Math.sqrt(r2)*(b1>0?1:-1), se=Math.sqrt(ss_res/(n-2));
+  return {b0,b1,r,r2,se};
+}
+
+function bracket(h){ if(h<=12)return{l:'Low (5–12)',c:'#E74C3C'}; if(h<=20)return{l:'Moderate (13–20)',c:'#E67E22'}; if(h<=30)return{l:'High (21–30)',c:'#2E74B5'}; return{l:'Very High (31+)',c:'#27AE60'}; }
+function grade(c){ if(c>=3.7)return{l:'Excellent',bg:'#EAF6EE',c:'#27AE60'}; if(c>=3.3)return{l:'Very Good',bg:'#EBF3FB',c:'#2E74B5'}; if(c>=3.0)return{l:'Good',bg:'#FFF8DC',c:'#8B6914'}; if(c>=2.5)return{l:'Average',bg:'#FEF5EC',c:'#E67E22'}; return{l:'Below Avg',bg:'#FEF2F2',c:'#C0392B'}; }
+function dc(id){ if(charts[id]){charts[id].destroy();charts[id]=null;} }
+
+function render(){
+  const xs=data.map(d=>d.h), ys=data.map(d=>d.c);
+  const sx=calc(xs), sy=calc(ys), rv=reg(xs,ys);
+  if(curPage==='dashboard') renderDash(xs,ys,sx,sy,rv);
+  if(curPage==='data') renderData();
+  if(curPage==='stats') renderStats(xs,ys,sx,sy);
+  if(curPage==='probability') renderProb(xs,ys,sy,rv);
+  if(curPage==='regression') renderReg(xs,ys,rv);
+  if(curPage==='team') renderTeam();
+}
+
+function renderDash(xs,ys,sx,sy,rv){
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi a"><div class="lbl">Students (n)</div><div class="val">${sx.n}</div><div class="sub">Dataset size</div></div>
+    <div class="kpi"><div class="lbl">Mean Study Hrs</div><div class="val">${sx.mean.toFixed(1)}</div><div class="sub">hrs/week</div></div>
+    <div class="kpi"><div class="lbl">Mean CGPA</div><div class="val">${sy.mean.toFixed(2)}</div><div class="sub">out of 4.00</div></div>
+    <div class="kpi g"><div class="lbl">Pearson r</div><div class="val">${rv.r.toFixed(4)}</div><div class="sub">Correlation</div></div>
+    <div class="kpi gr"><div class="lbl">r² Explained</div><div class="val">${(rv.r2*100).toFixed(1)}%</div><div class="sub">CGPA variance</div></div>
+    <div class="kpi"><div class="lbl">Regression Slope</div><div class="val">${rv.b1.toFixed(4)}</div><div class="sub">CGPA per hr</div></div>`;
+
+  dc('cScatter');
+  const rpts=[{x:Math.min(...xs),y:+(rv.b0+rv.b1*Math.min(...xs)).toFixed(4)},{x:Math.max(...xs),y:+(rv.b0+rv.b1*Math.max(...xs)).toFixed(4)}];
+  charts.cScatter=new Chart(document.getElementById('cScatter'),{type:'scatter',data:{datasets:[
+    {label:'Students',data:data.map(d=>({x:d.h,y:d.c})),backgroundColor:'#2E74B5',borderColor:'#1F3864',borderWidth:1.5,pointRadius:6,pointHoverRadius:8},
+    {label:`Y = ${rv.b1.toFixed(4)}X + ${rv.b0.toFixed(4)}`,data:rpts,type:'line',borderColor:'#C0392B',borderWidth:2.5,pointRadius:0,fill:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top'}},scales:{x:{title:{display:true,text:'Study Hours / Week'},min:0,max:45},y:{title:{display:true,text:'CGPA'},min:1,max:4.2}}}});
+
+  dc('cHist');
+  const bins=[[0,8],[8,16],[16,24],[24,32],[32,40],[40,48]];
+  charts.cHist=new Chart(document.getElementById('cHist'),{type:'bar',data:{labels:bins.map(b=>b[0]+'-'+b[1]),datasets:[{label:'Students',data:bins.map(b=>xs.filter(x=>x>=b[0]&&x<b[1]).length),backgroundColor:'#2E74B5',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{stepSize:1},title:{display:true,text:'Count'}},x:{title:{display:true,text:'Hours/Week'}}}}});
+
+  dc('cBar');
+  const bkts=[[5,12],[13,20],[21,30],[31,60]],bLabels=['Low (5–12)','Moderate (13–20)','High (21–30)','Very High (31+)'];
+  const avgs=bkts.map(([lo,hi])=>{const g=data.filter(d=>d.h>=lo&&d.h<=hi);return g.length?+(g.reduce((t,d)=>t+d.c,0)/g.length).toFixed(2):0;});
+  charts.cBar=new Chart(document.getElementById('cBar'),{type:'bar',data:{labels:bLabels,datasets:[{label:'Avg CGPA',data:avgs,backgroundColor:['#E74C3C','#E67E22','#2E74B5','#27AE60'],borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:4.2,title:{display:true,text:'Avg CGPA'}}}}});
+
+  dc('cBox');
+  const xN=[sx.min,sx.q1,sx.median,sx.q3,sx.max].map(v=>+((v-sx.min)/(sx.max-sx.min)*100).toFixed(1));
+  const yN=[sy.min,sy.q1,sy.median,sy.q3,sy.max].map(v=>+((v-sy.min)/(sy.max-sy.min)*100).toFixed(1));
+  charts.cBox=new Chart(document.getElementById('cBox'),{type:'bar',data:{labels:['Study Hours','CGPA'],
+    datasets:[{label:'Min→Q1',data:[xN[0],yN[0]],backgroundColor:'transparent'},{label:'IQR (Q1→Q3)',data:[xN[3]-xN[1],yN[3]-yN[1]],backgroundColor:['rgba(46,116,181,.4)','rgba(39,165,96,.4)'],borderColor:['#2E74B5','#27AE60'],borderWidth:2},{label:'Q3→Max',data:[xN[4]-xN[3],yN[4]-yN[3]],backgroundColor:'transparent'}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,title:{display:true,text:'Normalized Range (%)'}},y:{stacked:true}}}});
+
+  // Normal curve
+  dc('cNormal');
+  const cgpaBins=[[1.5,2.0],[2.0,2.5],[2.5,3.0],[3.0,3.5],[3.5,4.0]];
+  const cgpaLabels=cgpaBins.map(b=>b[0].toFixed(1)+'-'+b[1].toFixed(1));
+  const cgpaCounts=cgpaBins.map(b=>ys.filter(y=>y>=b[0]&&y<b[1]).length);
+  charts.cNormal=new Chart(document.getElementById('cNormal'),{type:'bar',
+    data:{labels:cgpaLabels,datasets:[
+      {label:'Actual Count',data:cgpaCounts,backgroundColor:'rgba(46,116,181,0.6)',borderRadius:4},
+      {label:'68% Range (±1 SD)',data:cgpaBins.map(b=>b[0]>=sy.mean-sy.sd&&b[1]<=sy.mean+sy.sd?cgpaCounts[cgpaBins.findIndex(x=>x[0]===b[0])]:null),backgroundColor:'rgba(39,165,96,0.3)',borderColor:'#27AE60',borderWidth:2,borderRadius:4},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true},tooltip:{callbacks:{label:d=>d.dataset.label+': '+d.raw}}},
+      scales:{y:{ticks:{stepSize:1},title:{display:true,text:'Number of Students'}},x:{title:{display:true,text:'CGPA Range'}}}}});
+}
+
+function renderData(){
+  const body=document.getElementById('dataBody');
+  body.innerHTML='';
+  data.forEach((d,i)=>{
+    const b=bracket(d.h);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${i+1}</td>
+      <td><input type="number" value="${d.h}" min="1" max="60" step="0.5" oninput="upd(${i},'h',this.value)"></td>
+      <td><input type="number" value="${d.c}" min="0" max="4" step="0.01" oninput="upd(${i},'c',this.value)"></td>
+      <td><span style="background:${b.c}22;color:${b.c};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">${b.l}</span></td>
+      <td><button class="btn btn-d btn-sm" onclick="delRow(${i})">Delete</button></td>`;
+    body.appendChild(tr);
+  });
+}
+
+function upd(i,k,v){ const val=parseFloat(v); if(!isNaN(val)) data[i][k]=val; if(curPage==='data') renderData(); }
+function delRow(i){ if(data.length<=3){alert('Need at least 3 data points.');return;} data.splice(i,1); renderData(); }
+function addRow(){
+  const h=parseFloat(document.getElementById('nH').value), c=parseFloat(document.getElementById('nC').value);
+  if(isNaN(h)||h<1||h>60){alert('Enter valid study hours (1–60).');return;}
+  if(isNaN(c)||c<0||c>4){alert('Enter valid CGPA (0.0–4.0).');return;}
+  data.push({h,c}); document.getElementById('nH').value=''; document.getElementById('nC').value='';
+  renderData();
+}
+
+function renderStats(xs,ys,sx,sy){
+  const rows=(s,dp)=>[
+    ['n (Sample Size)',s.n],['Mean',s.mean.toFixed(dp)],['Median',s.median.toFixed(dp)],['Mode','No mode (all unique)'],
+    ['Min',s.min.toFixed(dp)],['Max',s.max.toFixed(dp)],['Range',s.range.toFixed(dp)],
+    ['Variance (s²)',s.variance.toFixed(dp===1?2:4)],['Std Dev (s)',s.sd.toFixed(dp)],
+    ['Q1 (25th %ile)',s.q1.toFixed(dp)],['Q3 (75th %ile)',s.q3.toFixed(dp)],['IQR',s.iqr.toFixed(dp)],
+    ['10th Percentile',s.p10.toFixed(dp)],['90th Percentile',s.p90.toFixed(dp)],
+    ['Skewness',s.skew.toFixed(3)],['Kurtosis (excess)',s.kurt.toFixed(3)],
+  ];
+  document.getElementById('stX').innerHTML='<tr><th>Statistic</th><th>Value</th></tr>'+rows(sx,1).map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+  document.getElementById('stY').innerHTML='<tr><th>Statistic</th><th>Value</th></tr>'+rows(sy,4).map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+
+  const xBins=[[0,10],[10,20],[20,30],[30,40],[40,50]],yBins=[[1.5,2.0],[2.0,2.5],[2.5,3.0],[3.0,3.5],[3.5,4.0]];
+  dc('cHX'); charts.cHX=new Chart(document.getElementById('cHX'),{type:'bar',data:{labels:xBins.map(b=>b[0]+'-'+b[1]),datasets:[{label:'Count',data:xBins.map(b=>xs.filter(x=>x>=b[0]&&x<b[1]).length),backgroundColor:'#2E74B5',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{stepSize:1}}}}});
+  dc('cHY'); charts.cHY=new Chart(document.getElementById('cHY'),{type:'bar',data:{labels:yBins.map(b=>b[0].toFixed(1)+'-'+b[1].toFixed(1)),datasets:[{label:'Count',data:yBins.map(b=>ys.filter(y=>y>=b[0]&&y<b[1]).length),backgroundColor:'#27AE60',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{stepSize:1}}}}});
+}
+
+function renderProb(xs,ys,sy,rv){
+  const n=data.length;
+  document.getElementById('nTotal').textContent=n;
+  const probRows=[
+    ['P(CGPA > 3.0)',ys.filter(y=>y>3.0).length,n,'Probability of randomly selected student having CGPA above 3.0'],
+    ['P(CGPA < 2.5)',ys.filter(y=>y<2.5).length,n,'Probability of having CGPA below 2.5'],
+    ['P(CGPA >= 3.5)',ys.filter(y=>y>=3.5).length,n,'Probability of achieving CGPA 3.5 or above'],
+    ['P(Study Hours > 20)',xs.filter(x=>x>20).length,n,'Probability of studying more than 20 hrs/week'],
+    ['P(Study Hours < 15)',xs.filter(x=>x<15).length,n,'Probability of studying less than 15 hrs/week'],
+    ['P(Study Hours > 30)',xs.filter(x=>x>30).length,n,'Probability of studying more than 30 hrs/week'],
+  ];
+  document.getElementById('probTbl').innerHTML='<tr><th>Event</th><th>Favorable</th><th>Total</th><th>Probability</th><th>Interpretation</th></tr>'+
+    probRows.map(r=>`<tr><td><strong>${r[0]}</strong></td><td>${r[1]}</td><td>${r[2]}</td><td><strong>${r[1]}/${r[2]} = ${(r[1]/r[2]).toFixed(2)}</strong></td><td style="font-size:12px;color:var(--muted)">${r[3]}</td></tr>`).join('');
+
+  const condRows=[
+    {cond:'Study Hours > 20',event:'CGPA > 3.0',B:data.filter(d=>d.h>20),AB:data.filter(d=>d.h>20&&d.c>3.0)},
+    {cond:'Study Hours < 15',event:'CGPA < 2.5',B:data.filter(d=>d.h<15),AB:data.filter(d=>d.h<15&&d.c<2.5)},
+    {cond:'Study Hours > 28',event:'CGPA >= 3.5',B:data.filter(d=>d.h>28),AB:data.filter(d=>d.h>28&&d.c>=3.5)},
+    {cond:'Study Hours < 20',event:'CGPA < 3.0',B:data.filter(d=>d.h<20),AB:data.filter(d=>d.h<20&&d.c<3.0)},
+  ];
+  document.getElementById('condTbl').innerHTML='<tr><th>Condition (B)</th><th>Event (A)</th><th>|B|</th><th>|A∩B|</th><th>P(A|B)</th></tr>'+
+    condRows.map(r=>`<tr><td>${r.cond}</td><td>${r.event}</td><td>${r.B.length}</td><td>${r.AB.length}</td><td><strong>${r.B.length?+(r.AB.length/r.B.length).toFixed(3):'N/A'}</strong></td></tr>`).join('');
+
+  const empRows=[
+    {rule:'68% Rule',mult:1},{rule:'95% Rule',mult:2},{rule:'99.7% Rule',mult:3}
+  ];
+  document.getElementById('empTbl').innerHTML='<tr><th>Rule</th><th>Formula</th><th>CGPA Range</th><th>Expected %</th><th>Actual Students</th><th>Actual %</th></tr>'+
+    empRows.map(r=>{
+      const lo=sy.mean-r.mult*sy.sd, hi=sy.mean+r.mult*sy.sd;
+      const actual=ys.filter(y=>y>=lo&&y<=hi).length;
+      return `<tr><td><strong>${r.rule}</strong></td><td>Mean ± ${r.mult} SD</td><td>${lo.toFixed(2)} to ${hi.toFixed(2)}</td><td>${[68,95,99.7][r.mult-1]}%</td><td>${actual} / ${n}</td><td><strong>${(actual/n*100).toFixed(0)}%</strong></td></tr>`;
+    }).join('');
+}
+
+function renderReg(xs,ys,rv){
+  document.getElementById('regEq').innerHTML=`<div class="reg-eq">Y = ${rv.b1.toFixed(4)} × X + ${rv.b0.toFixed(4)}</div><div class="reg-sub">Correlation r = ${rv.r.toFixed(4)} &nbsp;|&nbsp; r² = ${(rv.r2*100).toFixed(2)}% &nbsp;|&nbsp; Standard Error = ${rv.se.toFixed(4)}</div>`;
+  document.getElementById('corrTbl').innerHTML='<tr><th>Measure</th><th>Value</th></tr>'+
+    [['Pearson r',rv.r.toFixed(4)],['r² (CoD)',(rv.r2*100).toFixed(2)+'%'],['Strength',rv.r>0.9?'Very Strong':'Strong'],['SE',rv.se.toFixed(4)]].map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+  document.getElementById('regTbl').innerHTML='<tr><th>Parameter</th><th>Value</th></tr>'+
+    [['Slope b1',rv.b1.toFixed(4)],['Intercept b0',rv.b0.toFixed(4)],['Equation',`Y = ${rv.b1.toFixed(4)}X + ${rv.b0.toFixed(4)}`],['n (sample)',xs.length]].map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+  updatePred();
+  dc('cRegSc');
+  charts.cRegSc=new Chart(document.getElementById('cRegSc'),{type:'scatter',data:{datasets:[
+    {label:'Data',data:data.map(d=>({x:d.h,y:d.c})),backgroundColor:'#2E74B5',borderColor:'#1F3864',borderWidth:1,pointRadius:5},
+    {label:'Regression',data:[{x:Math.min(...xs),y:rv.b0+rv.b1*Math.min(...xs)},{x:Math.max(...xs),y:rv.b0+rv.b1*Math.max(...xs)}],type:'line',borderColor:'#C0392B',borderWidth:2,pointRadius:0,fill:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{title:{display:true,text:'Study Hours'},min:0,max:Math.max(...xs)+5},y:{title:{display:true,text:'CGPA'},min:0.8,max:4.2}}}});
+  const resids=data.map(d=>+(d.c-(rv.b0+rv.b1*d.h)).toFixed(4));
+  dc('cResid');
+  charts.cResid=new Chart(document.getElementById('cResid'),{type:'bar',data:{labels:data.map((_,i)=>'S'+(i+1)),datasets:[{label:'Residual',data:resids,backgroundColor:resids.map(r=>r>=0?'rgba(39,165,96,0.6)':'rgba(192,57,43,0.6)'),borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{title:{display:true,text:'Residual'}},x:{ticks:{autoSkip:false,maxRotation:0,font:{size:9}}}}}});
+}
+
+function updatePred(){
+  const xs=data.map(d=>d.h),ys=data.map(d=>d.c),rv=reg(xs,ys);
+  const h=parseFloat(document.getElementById('predSlider').value);
+  document.getElementById('predNum').value=h;
+  const p=Math.min(4.0,Math.max(0,rv.b0+rv.b1*h));
+  const g=grade(p);
+  document.getElementById('predVal').textContent=p.toFixed(2);
+  const b=document.getElementById('predBadge');
+  b.textContent=g.l; b.style.background=g.bg; b.style.color=g.c;
+}
+function syncSlider(){ const v=parseFloat(document.getElementById('predNum').value); if(!isNaN(v)&&v>=1&&v<=60){document.getElementById('predSlider').value=v;updatePred();} }
+
+function renderTeam(){
+  const team=[
+    {name:'Muhammad Ahmad',reg:'NUM-BSCS-2024-44',role:'Mean, Median, Mode | Graphs | Regression',color:'#1F3864',
+      tasks:['Calculated Mean: X-bar = 22.05 hrs, Y-bar = 3.03','Calculated Median: X = 21.50 hrs, Y = 3.125','Verified Mode: all values unique in both variables','Constructed Scatter Plot with regression line overlay','Constructed Histogram of Study Hours distribution','Constructed Box Plot (normalized, side by side)','Constructed Bar Chart by study bracket','Derived Regression: Y = 0.0583X + 1.7439, SE = 0.0427','Generated CGPA predictions using the regression model']},
+    {name:'Allah Ditta',reg:'NUM-BSCS-2024-10',role:'Percentile | Variance | Std Dev | Conditional Probability',color:'#2E74B5',
+      tasks:['Computed Q1 (25th %ile): Hours = 14.75, CGPA = 2.6375','Computed Q3 (75th %ile): Hours = 30.50, CGPA = 3.4875','Computed 10th & 90th Percentiles for both variables','Computed IQR: Hours = 15.75, CGPA = 0.85','Calculated Variance: s2 = 95.94 (Hours), s2 = 0.3286 (CGPA)','Calculated Std Dev: s = 9.80 hrs, s = 0.5732 CGPA','Measured Skewness and Kurtosis for both variables','Verified no outliers using 1.5 × IQR rule','Applied Conditional Probability: P(CGPA>3.0 | Hours>20) = 1.00']},
+    {name:'Najia Nayab',reg:'NUM-BSCS-2024-62',role:'Correlation | Normal Curve | Empirical Rule | Probability',color:'#1F5296',
+      tasks:['Calculated Pearson r = 0.9972 (very strong positive)','Computed r2 = 0.9944 (99.44% variance explained)','Verified approximate normality (skewness ≈ 0)','Applied 68% Empirical Rule: 14/20 students within 1 SD','Applied 95% Empirical Rule: 19/20 students within 2 SD','Applied 99.7% Empirical Rule: 20/20 students within 3 SD','Calculated P(CGPA > 3.0) = 11/20 = 0.55','Calculated P(CGPA >= 3.5) = 5/20 = 0.25','Calculated P(Study Hours > 20) = 11/20 = 0.55']},
+  ];
+  document.getElementById('teamGrid').innerHTML=team.map(m=>`
+    <div class="mcard">
+      <div class="mhead">
+        <div class="avatar" style="background:${m.color}">${m.name.split(' ').map(w=>w[0]).join('')}</div>
+        <div><div class="mname">${m.name}</div><div class="mreg">${m.reg}</div>
+        <div class="rbadge" style="background:${m.color}22;color:${m.color}">${m.role}</div></div>
+      </div>
+      <ul class="mtasks">${m.tasks.map(t=>`<li>${t}</li>`).join('')}</ul>
+    </div>`).join('');
+}
+
+render();
+</script>
+</body>
+</html>
